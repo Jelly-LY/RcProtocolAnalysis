@@ -12,8 +12,8 @@ void UartInit(void)
 #ifdef  UartRC	
     
 #ifdef SbusTX 
-    RCC_APB2PeriphClockCmd(RC_TXIO_RCC,ENABLE);
-    RCC_APB1PeriphClockCmd(RC_TX_UART_RCC, ENABLE);
+    RCC_APB2PeriphClockCmd(RC_TXIO_RCC,ENABLE); // GPIO Clock
+    RCC_APB1PeriphClockCmd(RC_TX_UART_RCC, ENABLE); // UART Clock
     GPIO_InitStructure.GPIO_Pin = RC_TX_PIN;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
@@ -21,8 +21,8 @@ void UartInit(void)
 #endif 
     
 #ifdef SbusRX
-    RCC_APB2PeriphClockCmd(RC_RXIO_RCC,ENABLE);
-    RCC_APB1PeriphClockCmd(RC_RX_UART_RCC, ENABLE);
+    RCC_APB2PeriphClockCmd(RC_RXIO_RCC,ENABLE); // GPIO Clock
+    RCC_APB1PeriphClockCmd(RC_RX_UART_RCC, ENABLE); // UART Clock
     GPIO_InitStructure.GPIO_Pin = RC_RX_PIN;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
@@ -37,7 +37,7 @@ void UartInit(void)
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 #ifdef SbusRX    
 	USART_InitStructure.USART_Mode = USART_Mode_Rx ;
-	USART_ITConfig(RC_RX_UART_Port, USART_IT_IDLE, ENABLE);
+	USART_ITConfig(RC_RX_UART_Port, USART_IT_IDLE, ENABLE);//ENABLE IDLE interrupt
     USART_Init(RC_RX_UART_Port, &USART_InitStructure);
 	NVIC_InitStructure.NVIC_IRQChannel = RC_RX_UART_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority=0;
@@ -160,18 +160,19 @@ void UnSbusPack(u16 *Array)  //sbus Decode
 	SbusDataRx[0]=0;
 	SbusDataRx[24]=0xff;
 }
-int DMAbuff_length=0; 
+u16 DMA_Residual_length=0; 
 void USART2_IRQHandler(void) 
 {
 	u8 RxTemp;
 	if(USART_GetITStatus(RC_RX_UART_Port,USART_IT_IDLE)!=RESET)
 	{
+		DMA_Cmd(RC_DMA_Rx_Ch,DISABLE);		// off DMA1_Channel6
 		RxTemp=RC_RX_UART_Port->SR;			// USART2->SR
 		RxTemp=RC_RX_UART_Port->DR;			// Clear USART2->DR
-		DMA_Cmd(RC_DMA_Rx_Ch,DISABLE);		// off DMA1_Channel6
+		
 		DMA_ClearFlag(RC_Dma_RxFlagTC);		// Clear DMA1_FLAG_TC6
-		DMAbuff_length=DMA_GetCurrDataCounter(RC_DMA_Rx_Ch);//Get the receive length
-		if(DMAbuff_length!=SbusLength || (SbusDataRx[0] != 0x0f && SbusDataRx[24]!=0x00))// Invalid frame,Set Curr Data Counter SbusLength
+		DMA_Residual_length=DMA_GetCurrDataCounter(RC_DMA_Rx_Ch);//Get the residual length
+		if(DMA_Residual_length!=SbusLength || (SbusDataRx[0] != 0x0f && SbusDataRx[24]!=0x00))// Invalid frame,Set Curr Data Counter SbusLength
 		{
 			DMA_SetCurrDataCounter(RC_DMA_Rx_Ch,SbusLength);
 			SbusDataRx[0]=0;

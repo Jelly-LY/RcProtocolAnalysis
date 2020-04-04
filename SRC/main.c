@@ -85,8 +85,12 @@ int main(void)
     {
 #ifdef  SbusRX
 #ifdef  UartDebug
-        for(u8 i=0;i<15;i++)
-        usb_printf("CH[%d]",(int)i,ChannelRx[i]);
+		delay_ms(10);
+        for(u8 i=0;i<16;i++)
+        {
+			usb_printf("CH[%d]= %d ",(int)i,ChannelRx[i]);
+		}
+		usb_printf("\n ");
 #endif 
 #endif 
     }
